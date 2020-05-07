@@ -34,7 +34,7 @@ Example of a plate layout of 21 samples and Pico green standards, with optima da
 Create and activate a conda environment to get the minimum python version required for a [non-jupyter opentrons installation](https://docs.opentrons.com/v2/writing.html#non-jupyter-installation)
 
 ```bash
-conda env create -f opentrons_env.yaml
+conda env create -f opentrons_env.yml
 conda activate opentrons_env
 ```
 
