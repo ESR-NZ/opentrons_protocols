@@ -1,8 +1,8 @@
-
 from opentrons import protocol_api
 import pandas as pd
 import numpy as np
 import string
+import sys
 import glob
 import os
 import time
@@ -31,7 +31,7 @@ f = np.polyfit(stnds_values, stnds_concs, deg=1)
 sample_concs = (optima_raw.loc[:,:3]*f[0]+f[1])/10
 ## Set to Nan of too low to be useful. This will 'count' what samples are to be processed 
 final_conc = 2
-sample_concs = sample_concs.applymap(lambda x: np.NaN if x <= 4 else x)
+sample_concs = sample_concs.applymap(lambda x: (np.NaN if x <= (final * 2) else x))
 
 ## Complementry functions to calulate the dilution volumes
 ## Assume a max PCR vol avaliable of 20ul 
@@ -70,7 +70,7 @@ def dilute(sample_conc, final_conc = final_conc):
     
 ## Make some dfs for the amounts to be transfered
 add_pcr_df = sample_concs.applymap(lambda conc: (get_pcr_prod(conc)))
-add_water_df = sample_concs.applymap(lambda conc: dilute(conc))
+add_water_df = sample_concs.applymap(lambda conc: (dilute(conc)))
 
 ## A 96 well plate coordinate dataframe
 plate_96 = pd.DataFrame({k:[letter + str(k) for letter in string.ascii_uppercase[:8]] for k in range(1,13)})
