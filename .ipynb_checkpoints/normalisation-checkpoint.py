@@ -1,16 +1,26 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 from opentrons import protocol_api
 import pandas as pd
 import numpy as np
 import string
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 import glob
 import os
 import time
 #!{sys.executable} -m pip install xlrd
 
+<<<<<<< HEAD
 # Set the required concentration of final diluted solution per well (ng/ul)
 final_conc = 2
 
+=======
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 ## Get most recent uploaded input file from plate reader 
 list_of_xlsx_files = glob.glob('*.xlsx') # will need path of where these are on the robot file system
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
@@ -33,7 +43,12 @@ f = np.polyfit(stnds_values, stnds_concs, deg=1)
 ## Calc the concentrations of each sample.
 sample_concs = (optima_raw.loc[:,:3]*f[0]+f[1])/10
 ## Set to Nan of too low to be useful. This will 'count' what samples are to be processed 
+<<<<<<< HEAD
 sample_concs = sample_concs.applymap(lambda x: np.NaN if x <= (final_conc * 2) else x)
+=======
+final_conc = 2
+sample_concs = sample_concs.applymap(lambda x: np.NaN if x <= 4 else x)
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 
 ## Complementry functions to calulate the dilution volumes
 ## Assume a max PCR vol avaliable of 20ul 
@@ -71,7 +86,11 @@ def dilute(sample_conc, final_conc = final_conc):
     return round(vol2, 1)
     
 ## Make some dfs for the amounts to be transfered
+<<<<<<< HEAD
 add_pcr_df = sample_concs.applymap(lambda conc: get_pcr_prod(conc))
+=======
+add_pcr_df = sample_concs.applymap(lambda conc: (get_pcr_prod(conc)))
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 add_water_df = sample_concs.applymap(lambda conc: dilute(conc))
 
 ## A 96 well plate coordinate dataframe
@@ -148,17 +167,28 @@ bc_to_wells = zip(bc_to_use, EP_wells)
 
 ## Robot setup ## 
 metadata = {
+<<<<<<< HEAD
     'apiLevel': '2.3',
+=======
+    'apiLevel': '2.2',
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
     'author': 'Kemp and Storey'}
 
 def run(protocol: protocol_api.ProtocolContext):
     # Create labware
     
     ## Sample plate on tempdeck.
+<<<<<<< HEAD
     #tempdeck = protocol.load_module('tempdeck', 10)
     
     #sample_plate = tempdeck.load_labware('corning_96_wellplate_360ul_flat')
     sample_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 10)
+=======
+    tempdeck = protocol.load_module('tempdeck', 10)
+    
+    sample_plate = tempdeck.load_labware('corning_96_wellplate_360ul_flat')
+    #sample_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 10)
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
 
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
@@ -199,7 +229,11 @@ def run(protocol: protocol_api.ProtocolContext):
     p20.transfer(p20_pcr_vols, 
                  [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
                  [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_to], 
+<<<<<<< HEAD
                  new_tip='always'
+=======
+                 new_tip='always')
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
     
     
     ## Make the end repair master mix in mastermix_Tube 

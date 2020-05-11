@@ -9,9 +9,6 @@ import time
 import sys
 #!{sys.executable} -m pip install xlrd
 
-# Set the required concentration of final diluted solution per well (ng/ul)
-final_conc = 2
-
 ## Get most recent uploaded input file from plate reader 
 list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
@@ -37,7 +34,8 @@ f = np.polyfit(stnds_values, stnds_concs, deg=1)
 ## Calc the concentrations of each sample.
 sample_concs = (optima_raw.loc[:,:3]*f[0]+f[1])/10
 ## Set to Nan of too low to be useful. This will 'count' what samples are to be processed 
-sample_concs = sample_concs.applymap(lambda x: np.NaN if x <= (final_conc * 2) else x)
+final_conc = 2
+sample_concs = sample_concs.applymap(lambda x: (np.NaN if x <= (final * 2) else x))
 
 ## Complementry functions to calulate the dilution volumes
 ## Assume a max PCR vol avaliable of 20ul 
@@ -75,8 +73,8 @@ def dilute(sample_conc, final_conc = final_conc):
     return round(vol2, 1)
     
 ## Make some dfs for the amounts to be transfered
-add_pcr_df = sample_concs.applymap(lambda conc: get_pcr_prod(conc))
-add_water_df = sample_concs.applymap(lambda conc: dilute(conc))
+add_pcr_df = sample_concs.applymap(lambda conc: (get_pcr_prod(conc)))
+add_water_df = sample_concs.applymap(lambda conc: (dilute(conc)))
 
 ## A 96 well plate coordinate dataframe
 plate_96 = pd.DataFrame({k:[letter + str(k) for letter in string.ascii_uppercase[:8]] for k in range(1,13)})
@@ -152,16 +150,22 @@ bc_to_wells = zip(bc_to_use, EP_wells)
 
 ## Robot setup ## 
 metadata = {
-    'apiLevel': '2.3',
+    'apiLevel': '2.2',
     'author': 'Kemp and Storey'}
 
 def run(protocol: protocol_api.ProtocolContext):
     # Create labware
     
     ## Sample plate on tempdeck.
+<<<<<<< HEAD
     tempdeck = protocol.load_module('Temperature Module Gen2', 10)
     
     sample_plate = tempdeck.load_labware('opentrons_96_aluminumblock_nest_wellplate_100ul')
+=======
+    tempdeck = protocol.load_module('tempdeck', 10)
+    
+    sample_plate = tempdeck.load_labware('corning_96_wellplate_360ul_flat')
+>>>>>>> 525ff1ebee1defd681fa9e94f6ae4a2a8eaf9fc5
     #sample_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 10)
 
     ## Reagents and solutions
