@@ -3,6 +3,8 @@ import glob
 import time
 import sys
 
+## Script to test reading in files on the machine. Works in simulation, need to test on machine. 
+
 ## Get most recent uploaded input file from plate reader 
 list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
@@ -12,3 +14,5 @@ latest_file = max(list_of_xlsx_files, key=os.path.getctime)
 c_time = os.path.getctime(latest_file)
 local_time = time.ctime(c_time) 
 print("Input file created:", local_time) 
+
+
