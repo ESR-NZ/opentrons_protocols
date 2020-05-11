@@ -2,22 +2,18 @@ from opentrons import protocol_api
 import pandas as pd
 import numpy as np
 import string
+import sys
 import glob
 import os
 import time
-
-import sys
 #!{sys.executable} -m pip install xlrd
 
 # Set the required concentration of final diluted solution per well (ng/ul)
 final_conc = 2
 
 ## Get most recent uploaded input file from plate reader 
-list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
-
-#latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr.xlsx"
+list_of_xlsx_files = glob.glob('*.xlsx') # will need path of where these are on the robot file system
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
-
 c_time = os.path.getctime(latest_file)
 local_time = time.ctime(c_time) 
 print("Input file created:", local_time) 
@@ -159,10 +155,10 @@ def run(protocol: protocol_api.ProtocolContext):
     # Create labware
     
     ## Sample plate on tempdeck.
-    tempdeck = protocol.load_module('Temperature Module Gen2', 10)
+    #tempdeck = protocol.load_module('tempdeck', 10)
     
-    sample_plate = tempdeck.load_labware('opentrons_96_aluminumblock_nest_wellplate_100ul')
-    #sample_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 10)
+    #sample_plate = tempdeck.load_labware('corning_96_wellplate_360ul_flat')
+    sample_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 10)
 
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
@@ -203,7 +199,7 @@ def run(protocol: protocol_api.ProtocolContext):
     p20.transfer(p20_pcr_vols, 
                  [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
                  [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_to], 
-                 new_tip='always')
+                 new_tip='always'
     
     
     ## Make the end repair master mix in mastermix_Tube 
@@ -235,7 +231,7 @@ def run(protocol: protocol_api.ProtocolContext):
                         mix_before=(3, 8 * num_samples),
                         disposal_volume=(num_samples*10)*0.04) ## set to 4%
         
-    tempdeck.set_temperature(25)
+    #tempdeck.set_temperature(25)
     
     ## Transfer the normalised PCR over to the wells with EP_mastermix
     p20.transfer(5, [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_to],
@@ -243,10 +239,9 @@ def run(protocol: protocol_api.ProtocolContext):
     
     
     #protocol.delay(minutes=20) ## incubate rxn
-    tempdeck.set_temperature(65) ## stop rxn
-    protocol.delay(minutes=1)
+    #tempdeck.set_temperature(65) ## stop rxn
     
-
+    
     ## Barcode mastermix 
     ## Add the ligation master mix
     if num_samples < 2:
@@ -271,8 +266,8 @@ def run(protocol: protocol_api.ProtocolContext):
         p300.drop_tip()
     
     
-    protocol.delay(minutes=1)
-    tempdeck.set_temperature(12)
+    #protocol.delay(minutes=2)
+    #tempdeck.set_temperature(12)
     
     
     ## Dispense the appropriate barcodes to the right wells
@@ -281,7 +276,7 @@ def run(protocol: protocol_api.ProtocolContext):
                  [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], new_tip='always')
     
     
-    tempdeck.set_temperature(22)
+    #tempdeck.set_temperature(22)
     
     ## Add the ligase 
     p20.transfer(18, Lig_tube,
