@@ -8,9 +8,12 @@ import time
 import re
 
 ## Find excel file 
-list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
+list_of_xlsx_files = glob.glob('/root/Example_data/*.xlsx') # will need path of where these are on the robot file system
 list_of_NXT_files = [worksheet for worksheet in list_of_xlsx_files if worksheet.startswith("Nextera")]
+
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
+#latest_file = '/root/Example_data/NexteraXT_worksheet_20200504LP_NK.xlsx'
+
 ## Time of file creation
 c_time = os.path.getctime(latest_file)
 local_time = time.ctime(c_time) 
