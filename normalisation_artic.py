@@ -6,14 +6,10 @@ import glob
 import os
 import time
 
-#import sys
-#!{sys.executable} -m pip install xlrd
-
 ## Get most recent uploaded input file from plate reader 
-#list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
+list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
-list_of_xlsx_files = glob.glob('*.xlsx') # will need path of where these are on the robot file system
-
+#list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
 
 #latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr.xlsx"
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
@@ -144,7 +140,7 @@ master_mix = {'H20': add_6pc(7.5, num_samples),
 
 ### Barcoding logic ###
 ## set up array of the barcodes postion in plate/rack 
-bc_pos_array = np.array([letter + str(num) for letter in string.ascii_uppercase[:4] for num in range(1,7)])
+bc_pos_array = np.array([letter + str(num) for letter in string.ascii_uppercase[:2] for num in range(1,13)])
 ## select which wells to pick barcoeds from
 bc_to_use = list(bc_pos_array[pd.notna(add_water_df).T.values.flatten()])
 ## Map to the wells to put the barcodes in
@@ -156,48 +152,59 @@ metadata = {
     'apiLevel': '2.3',
     'author': 'Kemp and Storey'}
 
+    #######################################################################################################
+
 def run(protocol: protocol_api.ProtocolContext):
     # Create labware
     
     ## Sample plate on tempdeck.
     tempdeck = protocol.load_module('Temperature Module Gen2', 10)
     
-    sample_plate = tempdeck.load_labware('opentrons_96_aluminumblock_nest_wellplate_100ul')
+    sample_plate = tempdeck.load_labware('opentrons96aluminium_96_wellplate_200ul')
 
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
-    enzyme_rack = protocol.load_labware('opentrons_24_tuberack_generic_2ml_screwcap', 7)
-    ER_buffer = enzyme_rack['A1']
-    ER_enzyme = enzyme_rack['A2']
-    ER_mastermix_Tube = enzyme_rack['A3']
-    Lig_master_mix = enzyme_rack['A4']
-    Lig_enhance = enzyme_rack['A5']
-    Lig_tube = enzyme_rack['A6']
-    barcoded_combined_1 = enzyme_rack['D1'] ## Place to collect the barcoded frags together
     
-    ## Barcodes rack 
-    barcodes = protocol.load_labware('opentrons_24_tuberack_generic_2ml_screwcap', 4)
+    enzyme_rack = protocol.load_labware('opentrons_24_tuberack_generic_2ml_screwcap', 7)
+    ER_buffer = enzyme_rack['D1']
+    ER_enzyme = enzyme_rack['D2']
+    ER_mastermix_Tube = enzyme_rack['D3']
+    Lig_master_mix = enzyme_rack['D4']
+    Lig_enhance = enzyme_rack['D5']
+    Lig_tube = enzyme_rack['D6']
+
+    barcoded_combined_1 = enzyme_rack['C1'] ## Place to collect the barcoded frags together
+    
+    ## Barcodes plate - Rows A and B. BCs 1-24
+    barcodes = protocol.load_labware('axygen_96_wellplate_200ul', 4) 
     
     ## Tips
     tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
     tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 9)
     
-    tiprack_300ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 6)
+    tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 6)
 
     
     
     #Pipettes
-    p20 = protocol.load_instrument('p20_single_gen2', 'left', tip_racks = [tiprack_20ul_1,tiprack_20ul_2])
-    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks = [tiprack_300ul_1])
+    p20 = protocol.load_instrument('p20_single_gen2', 'left', 
+                                    tip_racks = [tiprack_20ul_1,tiprack_20ul_2])
+
+    p300 = protocol.load_instrument('p300_single_gen2', 'right', 
+                                    tip_racks = [tiprack_200ul_1])
 
 
     ## Transfer any volumes of H2O under 20ul with the p20
     if p20_dilute_pos: ## chck for empty list, pass if empty to save time and tip 
-        p20.distribute(p20_dilute_vol, dilutant, [sample_plate.wells_by_name()[well_name] for well_name in p20_dilute_pos])
+        p20.distribute(p20_dilute_vol, dilutant, 
+        [sample_plate.wells_by_name()[well_name] for well_name in p20_dilute_pos],
+        disposal_volume=0)
     
     ## Transfer any volumes of H2O for dilution over 20ul with the p300
     if p300_dilute_vol:
-        p300.distribute(p300_dilute_vol, dilutant, [sample_plate.wells_by_name()[well_name] for well_name in p300_dilute_pos])
+        p300.distribute(p300_dilute_vol, dilutant, 
+        [sample_plate.wells_by_name()[well_name] for well_name in p300_dilute_pos],
+        disposal_volume=0)
     
        
     ## Transfer the PCR products over
@@ -209,22 +216,24 @@ def run(protocol: protocol_api.ProtocolContext):
     
     ## Make the end repair master mix in mastermix_Tube 
     # Transfer the H20
-    if num_samples < 3:
-         p20.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube)
+    if master_mix['H20'] < 20:
+         p20.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube, blow_out=True)
     else:
-        p300.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube)
+        p300.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube, blow_out=True)
     
     # buffer
-    if num_samples < 11:
-        p20.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, mix_after=(3, 20)) 
-        ## mix amount needs looking at 5/num_samples? 
-        
+    if master_mix['ER_Buffer'] < 20:
+        p20.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, 
+                    blow_out=True) 
     else:
-        p300.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, mix_after=(3, 8 * num_samples))
+        p300.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, 
+                        blow_out=True)
     
-    p20.transfer(master_mix['ER_Enzyme'], ER_enzyme, ER_mastermix_Tube, mix_after=(3, 20))
+    # enzyme - always under 20ul
+    p20.transfer(master_mix['ER_Enzyme'], ER_enzyme, ER_mastermix_Tube, blow_out=True)
     
-    ## Dispense, mix before aspirate
+
+    ## Dispense, mixed before aspirate.
     if num_samples < 3:
         p20.distribute(10, ER_mastermix_Tube, 
                         [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], 
@@ -240,26 +249,27 @@ def run(protocol: protocol_api.ProtocolContext):
     
     ## Transfer the normalised PCR over to the wells with EP_mastermix
     p20.transfer(5, [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_to],
-        [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], new_tip='always')
+        [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], new_tip='always', mix_after=(2, 15))
     
     
-    #protocol.delay(minutes=20) ## incubate rxn
-    tempdeck.set_temperature(65) ## stop rxn
-    protocol.delay(minutes=1)
-    
+    protocol.delay(seconds=20) ## incubate rxn 20 mins
+    tempdeck.set_temperature(35) ## stop rxn 65 deg
+    protocol.delay(seconds=20)
+    tempdeck.set_temperature(25)
 
-    ## Barcode mastermix 
-    ## Add the ligation master mix
+
+    ## Barcode mastermix  
+    ## Make the ligation master mix
     if num_samples < 2:
-         p20.transfer(master_mix['Lig_master_mix'], Lig_master_mix, Lig_tube)
+         p20.transfer(master_mix['Lig_master_mix'], Lig_master_mix, Lig_tube, blow_out=True)
     else:
-        p300.transfer(master_mix['Lig_master_mix'], Lig_master_mix, Lig_tube)
+        p300.transfer(master_mix['Lig_master_mix'], Lig_master_mix, Lig_tube, blow_out=True)
         
     ## Add the ligation enhancer 
     if num_samples < 3: ## Add and mix with p20 
-        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(3, 15))
+        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(3, 15), blow_out=True)
     else: ## Mix afer addition with p300
-        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube)
+        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, blow_out=True)
         
         ## check total vol and ensure mix vol is within pipette range
         if master_mix['Lig_master_mix'] +  master_mix['Lig_enhance'] > 200:
@@ -271,9 +281,7 @@ def run(protocol: protocol_api.ProtocolContext):
         p300.mix(3, mix_vol, Lig_tube)
         p300.drop_tip()
     
-    
-    protocol.delay(minutes=1)
-    tempdeck.set_temperature(12)
+    tempdeck.set_temperature(18)
     
     
     ## Dispense the appropriate barcodes to the right wells
@@ -286,16 +294,16 @@ def run(protocol: protocol_api.ProtocolContext):
     
     ## Add the ligase 
     p20.transfer(18, Lig_tube,
-                 [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], new_tip='always', mix_after=(3, 20))
+                 [sample_plate.wells_by_name()[well_name] for well_name in EP_wells], new_tip='always', mix_after=(2, 20))
     
     
     ## Incubate the ligation
-#     protocol.delay(minutes=30)
-#     tempdeck.set_temperature(70)
-#     protocol.delay(minutes=10)
-#     tempdeck.set_temperature(10)
-#     protocol.delay(seconds=30)
-#     tempdeck.deactivate() 
+    protocol.delay(seconds=10)  ## 30 mins
+    tempdeck.set_temperature(35) ##70 deg
+    protocol.delay(seconds=10) ## 10 mins
+    tempdeck.set_temperature(18)
+    protocol.delay(seconds=10) ## 30 seconds
+    tempdeck.deactivate() 
     
     
     ## Collect all the samples together
