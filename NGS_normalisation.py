@@ -59,6 +59,7 @@ def run(protocol: protocol_api.ProtocolContext):
     
     sample_plate = protocol.load_labware('axygen_96_wellplate_200ul', 4)
     norm_plate = protocol.load_labware('axygen_96_wellplate_200ul', 5) 
+    
     RBS = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
     pool = protocol.load_labware('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap',6)
     
