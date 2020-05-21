@@ -10,10 +10,10 @@ import time
 #list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
 
-list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
+#list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
 
-#latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr.xlsx"
-latest_file = max(list_of_xlsx_files, key=os.path.getctime)
+latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr_3.xlsx"
+#latest_file = max(list_of_xlsx_files, key=os.path.getctime)
 #latest_file = "Example_data/pciogreen_pcr-20200414-xr.xlsx"
 
 c_time = os.path.getctime(latest_file)
@@ -186,12 +186,12 @@ def run(protocol: protocol_api.ProtocolContext):
     tempdeck = protocol.load_module('Temperature Module Gen2', 10)
     
     #Plates
-    sample_plate = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 4)
-    norm_plate = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 5)
-    reaction_plate = tempdeck.load_labware('opentrons_96_aluminumblock_biorad_wellplate_200ul')
+    sample_plate = protocol.load_labware('axygen_96_wellplate_200ul', 4)
+    norm_plate = protocol.load_labware('axygen_96_wellplate_200ul', 5)
+    reaction_plate = tempdeck.load_labware('opentrons96aluminium_96_wellplate_200ul')
     
     ## Barcodes plate - Rows A and B. BCs 1-24
-    barcodes = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 3) 
+    barcodes = protocol.load_labware('axygen_96_wellplate_200ul', 3) 
     
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
@@ -351,6 +351,3 @@ def run(protocol: protocol_api.ProtocolContext):
 #     p300.consolidate(35.5, 
 #                      [reaction_plate.wells_by_name()[well_name] for well_name in EP_wells],
 #                      enzyme_rack['D1'])
-    
-    
-
