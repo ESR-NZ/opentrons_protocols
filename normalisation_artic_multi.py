@@ -210,14 +210,18 @@ def run(protocol: protocol_api.ProtocolContext):
 
     
     ## Tips
-    tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
+    tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 1)
+    tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 2)
+    tiprack_20ul_3 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 3)
+    tiprack_20ul_4 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
+
     tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 9)
 
     
     
     #Pipettes
     p20 = protocol.load_instrument('p20_single_gen2', 'left', 
-                                    tip_racks = [tiprack_20ul_1,tiprack_20ul_2])
+                                    tip_racks = [tiprack_20ul_1, tiprack_20ul_2, tiprack_20ul_3, tiprack_20ul_4])
 
     p300 = protocol.load_instrument('p300_single_gen2', 'right', 
                                     tip_racks = [tiprack_200ul_1])
@@ -267,16 +271,23 @@ def run(protocol: protocol_api.ProtocolContext):
 
 
     ## Dispense, mixed before aspirate.
+    if (num_samples * 8) > 199: 
+        mix_volume = 190
+    else:
+        mix_volume = num_samples * 8
+    
+    
     if num_samples < 3:
         p20.distribute(10, ER_mastermix_Tube, 
                         [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
                         mix_before=(3, 8 * num_samples), 
-                        disposal_volume=(num_samples*10)*0.04) ## set to 4%
+                        disposal_volume=1 )## set to 4%
     else:
+
         p300.distribute(10, ER_mastermix_Tube, 
                         [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
-                        mix_before=(3, 8 * num_samples),
-                        disposal_volume=(num_samples*10)*0.04) ## set to 4%
+                        mix_before=(3, mix_volume),
+                        disposal_volume=2) ## set to 4%
         
           
             
@@ -305,7 +316,7 @@ def run(protocol: protocol_api.ProtocolContext):
         
     ## Add the ligation enhancer 
     if num_samples < 3: ## Add and mix with p20 
-        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(3, 15), blow_out=True)
+        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(2, 15), blow_out=True)
     else: ## Mix afer addition with p300
         p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, blow_out=True)
         
