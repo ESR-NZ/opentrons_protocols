@@ -191,7 +191,7 @@ def run(protocol: protocol_api.ProtocolContext):
     reaction_plate = tempdeck.load_labware('opentrons96aluminium_96_wellplate_200ul')
     
     ## Barcodes plate - Rows A and B. BCs 1-24
-    barcodes = protocol.load_labware('axygen_96_wellplate_200ul', 3) 
+    barcodes = protocol.load_labware('axygen_96_wellplate_200ul', 6) 
     
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
@@ -211,9 +211,7 @@ def run(protocol: protocol_api.ProtocolContext):
     
     ## Tips
     tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
-    tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 9)
-    
-    tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 6)
+    tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 9)
 
     
     
