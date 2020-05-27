@@ -10,10 +10,10 @@ import time
 #list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
 
-list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
+#list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
 
-#latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr.xlsx"
-latest_file = max(list_of_xlsx_files, key=os.path.getctime)
+#latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr_3.xlsx"
+#latest_file = max(list_of_xlsx_files, key=os.path.getctime)
 #latest_file = "Example_data/pciogreen_pcr-20200414-xr.xlsx"
 
 c_time = os.path.getctime(latest_file)
@@ -95,6 +95,16 @@ sample_concs_all = pd.concat([sample_concs_1, sample_concs_2, sample_concs_3], a
 add_pcr_df = sample_concs_all.applymap(lambda conc: (get_pcr_prod(conc)))
 add_water_df = sample_concs_all.applymap(lambda conc: (dilute(conc)))
 
+
+
+## Set ammounts for the blanks
+add_pcr_df[3][7] = 20
+add_pcr_df[7][7] = 20
+add_pcr_df[11][7] = 20
+
+add_water_df[3][7] = 80
+add_water_df[7][7] = 80
+add_water_df[11][7] = 80
 
 
 
@@ -186,12 +196,12 @@ def run(protocol: protocol_api.ProtocolContext):
     tempdeck = protocol.load_module('Temperature Module Gen2', 10)
     
     #Plates
-    sample_plate = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 4)
-    norm_plate = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 5)
-    reaction_plate = tempdeck.load_labware('opentrons_96_aluminumblock_biorad_wellplate_200ul')
+    sample_plate = protocol.load_labware('axygen_96_wellplate_200ul', 4)
+    norm_plate = protocol.load_labware('axygen_96_wellplate_200ul', 5)
+    reaction_plate = tempdeck.load_labware('opentrons96aluminium_96_wellplate_200ul')
     
     ## Barcodes plate - Rows A and B. BCs 1-24
-    barcodes = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', 3) 
+    barcodes = protocol.load_labware('axygen_96_wellplate_200ul', 6) 
     
     ## Reagents and solutions
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
@@ -210,16 +220,18 @@ def run(protocol: protocol_api.ProtocolContext):
 
     
     ## Tips
-    tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
-    tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 9)
-    
-    tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 6)
+    tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 1)
+    tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 2)
+    tiprack_20ul_3 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 3)
+    tiprack_20ul_4 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
+
+    tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 9)
 
     
     
     #Pipettes
     p20 = protocol.load_instrument('p20_single_gen2', 'left', 
-                                    tip_racks = [tiprack_20ul_1,tiprack_20ul_2])
+                                    tip_racks = [tiprack_20ul_1, tiprack_20ul_2, tiprack_20ul_3, tiprack_20ul_4])
 
     p300 = protocol.load_instrument('p300_single_gen2', 'right', 
                                     tip_racks = [tiprack_200ul_1])
@@ -269,16 +281,23 @@ def run(protocol: protocol_api.ProtocolContext):
 
 
     ## Dispense, mixed before aspirate.
+    if (num_samples * 8) > 199: 
+        mix_volume = 190
+    else:
+        mix_volume = num_samples * 8
+    
+    
     if num_samples < 3:
         p20.distribute(10, ER_mastermix_Tube, 
                         [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
                         mix_before=(3, 8 * num_samples), 
-                        disposal_volume=(num_samples*10)*0.04) ## set to 4%
+                        disposal_volume=1 )## set to 4%
     else:
+
         p300.distribute(10, ER_mastermix_Tube, 
                         [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
-                        mix_before=(3, 8 * num_samples),
-                        disposal_volume=(num_samples*10)*0.04) ## set to 4%
+                        mix_before=(3, mix_volume),
+                        disposal_volume=2) ## set to 4%
         
           
             
@@ -307,7 +326,7 @@ def run(protocol: protocol_api.ProtocolContext):
         
     ## Add the ligation enhancer 
     if num_samples < 3: ## Add and mix with p20 
-        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(3, 15), blow_out=True)
+        p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, mix_after=(2, 15), blow_out=True)
     else: ## Mix afer addition with p300
         p20.transfer(master_mix['Lig_enhance'], Lig_enhance, Lig_tube, blow_out=True)
         
@@ -351,6 +370,3 @@ def run(protocol: protocol_api.ProtocolContext):
 #     p300.consolidate(35.5, 
 #                      [reaction_plate.wells_by_name()[well_name] for well_name in EP_wells],
 #                      enzyme_rack['D1'])
-    
-    
-
