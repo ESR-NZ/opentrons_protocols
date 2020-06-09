@@ -8,18 +8,20 @@ import time
 import re
 
 ## Find excel file 
+
+
 list_of_xlsx_files = glob.glob('/root/Example_data/*.xlsx') # will need path of where these are on the robot file system
 list_of_NXT_files = [worksheet for worksheet in list_of_xlsx_files if worksheet.startswith("Nextera")]
 
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
-#latest_file = '/root/Example_data/NexteraXT_worksheet_20200504LP_NK.xlsx'
+#latest_file = '/root/Example_data/NexteraXT_worksheet_20200429LP_YM.xlsx'
 
 ## Time of file creation
 c_time = os.path.getctime(latest_file)
 local_time = time.ctime(c_time) 
     
 ## load up excel sheet
-lib_pre_data = pd.read_excel(latest_file, skiprows=6, sheet_name=1)  
+lib_pre_data = pd.read_excel(latest_file, skiprows=6, sheet_name=0)  
 
 ## Get the columns of interests from excel data
 nmol4 = lib_pre_data.iloc[:,5]
@@ -57,12 +59,12 @@ metadata = {
 
 def run(protocol: protocol_api.ProtocolContext):
     
+    
     sample_plate = protocol.load_labware('axygen_96_wellplate_200ul', 4)
     norm_plate = protocol.load_labware('axygen_96_wellplate_200ul', 5) 
-    
-    RBS = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
+     
     pool = protocol.load_labware('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap',6)
-    
+    RBS = pool['C1']
     
     tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
     tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 9)
@@ -76,18 +78,22 @@ def run(protocol: protocol_api.ProtocolContext):
                  [norm_plate.wells_by_name()[well_name] for well_name in RBS_wells_combined])
     
 
-    ## Transfer DNA    
-    p20.transfer(nmol2_vols, 
-                 [sample_plate.wells_by_name()[well_name] for well_name in wells_2],
-                 [norm_plate.wells_by_name()[well_name] for well_name in wells_2], new_tip = 'always')
+    # Transfer DNA
     
-    p20.transfer(nmol4_vols, 
+    if nmol2_vols:   
+        p20.transfer(nmol2_vols, 
+                 [sample_plate.wells_by_name()[well_name] for well_name in wells_2],
+                 [norm_plate.wells_by_name()[well_name] for well_name in wells_2], new_tip = 'always', blow_out=True)
+    
+    if nmol4_vols:
+        p20.transfer(nmol4_vols, 
                  [sample_plate.wells_by_name()[well_name] for well_name in wells_4],
-                 [norm_plate.wells_by_name()[well_name] for well_name in wells_4],new_tip = 'always')
+                 [norm_plate.wells_by_name()[well_name] for well_name in wells_4], new_tip = 'always', blow_out=True)
 
     
-    ## Pool sampels
-    p20.transfer(add_lib, 
-                 [sample_plate.wells_by_name()[well_name] for well_name in well_pos],
-                 pool['A1'])
+    # ## Pool sampels
+    # p20.transfer(add_lib, 
+    #              [norm_plate.wells_by_name()[well_name] for well_name in well_pos],
+    #              pool['A1'],new_tip="always", blow_out=True)
+    
     

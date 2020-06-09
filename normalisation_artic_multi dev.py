@@ -1,15 +1,16 @@
-from opentrons import protocol_api
+from opentrons import protocol_api, robot
+import pandas as pd
 import numpy as np
 import string
 import glob
 import os
 import time
-import pandas as pd
+
 ## Get most recent uploaded input file from plate reader 
-
-
 list_of_xlsx_files = glob.glob('/root/plateReaderData/*.xlsx') # will need path of where these are on the robot file system
 
+
+#list_of_xlsx_files = glob.glob('Example_data/*.xlsx') # will need path of where these are on the robot file system
 
 #latest_file = "/root/plateReaderData/pciogreen_pcr-20200414-xr_3.xlsx"
 latest_file = max(list_of_xlsx_files, key=os.path.getctime)
@@ -32,12 +33,12 @@ stnds_concs = [0, 1000, 100, 10, 1] ## Make sure this is set up clearly in the S
 ## Standard curve equation 
 f = np.polyfit(stnds_values, stnds_concs, deg=1)
 
-## Calc the concentrations of each sample. Assumed dilution factor of 2:200
-sample_concs_1 = (optima_raw.loc[:,:3]*f[0]+f[1])/5
-sample_concs_2 = (optima_raw.loc[:,5:7]*f[0]+f[1])/5
-sample_concs_3 = (optima_raw.loc[:,9:11]*f[0]+f[1])/5
+## Calc the concentrations of each sample.
+sample_concs_1 = (optima_raw.loc[:,:3]*f[0]+f[1])/10
+sample_concs_2 = (optima_raw.loc[:,5:7]*f[0]+f[1])/10
+sample_concs_3 = (optima_raw.loc[:,9:11]*f[0]+f[1])/10
 
-## Set to Nan if too low to be useful. This will 'count' what samples are to be processed 
+## Set to Nan of too low to be useful. This will 'count' what samples are to be processed 
 final_conc = 2
 sample_concs_1 = sample_concs_1.applymap(lambda x: (np.NaN if x <= (final_conc * 2) else x))
 sample_concs_2 = sample_concs_2.applymap(lambda x: (np.NaN if x <= (final_conc * 2) else x))
@@ -45,6 +46,8 @@ sample_concs_3 = sample_concs_3.applymap(lambda x: (np.NaN if x <= (final_conc *
 
 ## Complementry functions to calulate the dilution volumes
 ## Assume a max PCR vol avaliable of 20ul 
+
+
 
 
 
@@ -204,27 +207,24 @@ def run(protocol: protocol_api.ProtocolContext):
     dilutant = protocol.load_labware('usascientific_12_reservoir_22ml', 11)['A1']
     
     enzyme_rack = protocol.load_labware('opentrons_24_tuberack_generic_2ml_screwcap', 7)
-   
-    # ER_mastermix_Tube = enzyme_rack['D3']
- 
-    # Lig_mastermix_tube = enzyme_rack['D6']
+    
+    
+    # ER_mastermix_Tube = enzyme_rack['D1']
+    # Lig_tube = enzyme_rack['D2']
 
     # barcoded_combined_1 = enzyme_rack['A1'] ## Place to collect the barcoded frags together
     # barcoded_combined_2 = enzyme_rack['A2'] ## Place to collect the barcoded frags together
     # barcoded_combined_3 = enzyme_rack['A3'] ## Place to collect the barcoded frags together
 
-
-
+    
     ## Tips
     tiprack_20ul_1 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 1)
     tiprack_20ul_2 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 2)
-    tiprack_20ul_3 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 3)
-    tiprack_20ul_4 = protocol.load_labware('opentrons_96_filtertiprack_20ul', 8)
-
+    
     tiprack_200ul_1 = protocol.load_labware('opentrons_96_filtertiprack_200ul', 9)
 
-    
-    
+
+
     #Pipettes
     p20 = protocol.load_instrument('p20_single_gen2', 'left', 
                                     tip_racks = [tiprack_20ul_1, tiprack_20ul_2]) #, tiprack_20ul_3, tiprack_20ul_4])
@@ -234,60 +234,77 @@ def run(protocol: protocol_api.ProtocolContext):
 
     
     
-
-
     
-    #     ## Transfer any volumes of H2O under 20ul with the p20
-    # if p20_dilute_pos: ## chck for empty list, pass if empty to save time and tip 
-    #     p20.distribute(p20_dilute_vol, dilutant, 
-    #     [norm_plate.wells_by_name()[well_name] for well_name in p20_dilute_pos],
-    #     disposal_volume=0)
+        ## Transfer any volumes of H2O under 20ul with the p20
+    if p20_dilute_pos: ## chck for empty list, pass if empty to save time and tip 
+        p20.distribute(p20_dilute_vol, dilutant, 
+        [norm_plate.wells_by_name()[well_name] for well_name in p20_dilute_pos],
+        disposal_volume=0)
     
-    # ## Transfer any volumes of H2O for dilution over 20ul with the p300
-    # if p300_dilute_vol:
-    #     p300.distribute(p300_dilute_vol, dilutant, 
-    #     [norm_plate.wells_by_name()[well_name] for well_name in p300_dilute_pos],
-    #     disposal_volume=0)
+    ## Transfer any volumes of H2O for dilution over 20ul with the p300
+    if p300_dilute_vol:
+        p300.distribute(p300_dilute_vol, dilutant, 
+        [norm_plate.wells_by_name()[well_name] for well_name in p300_dilute_pos],
+        disposal_volume=0)
 
-    # ## Transfer the PCR products over
-    # p20.transfer(p20_pcr_vols, 
-    #              [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
-    #              [norm_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
-    #              new_tip='always', blow_out=True)
+    ## Transfer the PCR products over
+    p20.transfer(p20_pcr_vols, 
+                 [sample_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
+                 [norm_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
+                 new_tip='always')
     
     
 
-     
-
-    ## Pause and write ER master mix recipe   
+    robot.pause(msg = "make ER master mix and add 10ul to wells of rxn plate on tepmdeck")
+    # ## Make the end repair master mix in mastermix_Tube 
+    # # Transfer the H20
+    # if master_mix['H20'] < 20:
+    #      p20.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube, blow_out=True)
+    # else:
+    #     p300.transfer(master_mix['H20'], dilutant, ER_mastermix_Tube, blow_out=True)
     
+    # # buffer
+    # if master_mix['ER_Buffer'] < 20:
+    #     p20.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, 
+    #                 blow_out=True) 
+    # else:
+    #     p300.transfer(master_mix['ER_Buffer'], ER_buffer, ER_mastermix_Tube, 
+    #                     blow_out=True)
+    
+    # # enzyme - always under 20ul
+    # p20.transfer(master_mix['ER_Enzyme'], ER_enzyme, ER_mastermix_Tube, blow_out=True)
+    
+
+
+    # ## Dispense, mixed before aspirate.
+    # if (num_samples * 8) > 199: 
+    #     mix_volume = 190
+    # else:
+    #     mix_volume = num_samples * 8
     
     
     # if num_samples < 3:
-    #     protocol.max_speeds['Z'] = 15  ##Slow down the tip leaving the tube 
     #     p20.distribute(10, ER_mastermix_Tube, 
-    #                     [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from] 
-    #                     disposal_volume=0 )## set to 4%
-    #     protocol.max_speeds['Z'] = None
-    
+    #                     [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
+    #                     mix_before=(3, 8 * num_samples), 
+    #                     disposal_volume=1 )## set to 4%
     # else:
-    #     protocol.max_speeds['A'] = 15  ##Slow down the tip leaving the tube 
+
     #     p300.distribute(10, ER_mastermix_Tube, 
     #                     [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], 
-    #                     disposal_volume=2) ## set to 4%    
-    #     protocol.max_speeds['Z'] = None ##reset tip speed
-
-
-
+    #                     mix_before=(3, mix_volume),
+    #                     disposal_volume=2) ## set to 4%
+        
+          
             
     # tempdeck.set_temperature(25)
     
-    # ## Transfer the normalised PCR over to the wells with EP_mastermix
-    # p20.transfer(5, [norm_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from],
-    #     [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], new_tip='always', blow_out=True)
+    ## Transfer the normalised PCR over to the wells with EP_mastermix
+    p20.transfer(5, [norm_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from],
+        [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], new_tip='always')
     
     
-    
+    robot.pause(msg = "mix plate, incubare rxn plate for 20mins at rt, 5 mins at 65deg, replace plate and resume")
         
     # protocol.delay(minutes=20) ## incubate rxn 20 mins
     # tempdeck.set_temperature(65) ## stop rxn 65 deg
@@ -322,7 +339,7 @@ def run(protocol: protocol_api.ProtocolContext):
     # tempdeck.set_temperature(22)
     
     
-    # Dispense the appropriate barcodes to the right wells
+    ## Dispense the appropriate barcodes to the right wells
     p20.transfer(2.5, 
                  [barcodes.wells_by_name()[well_name] for well_name in bc_all],
                  [reaction_plate.wells_by_name()[well_name] for well_name in p20_pcr_pos_from], new_tip='always')
